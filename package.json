@@ -1,0 +1,9 @@
+{
+  
+  "type": "module",
+  
+  "dependencies": {
+    "natural": "^8.0.1",
+    "snoowrap": "^1.23.0"
+  }
+}
