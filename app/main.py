@@ -1,28 +1,27 @@
-from fastapi import FastAPI
-from app.services import fetch_reddit_posts, analyze_sentiment
+from fastapi import FastAPI, Query
+from app.models import SentimentResponse
+from app.services import analyze_posts, search_posts
+from app.settings import get_reddit_client
 
 app = FastAPI()
 
 @app.get("/")
 def read_root():
-    return {"message": "Bienvenido a la API de análisis de opiniones en Reddit"}
+    return {"message": "Bienvenido a la API de análisis de Reddit"}
 
-@app.get("/analyze/")
-async def analyze_reddit(subreddit: str, limit: int = 10):
-    try:
-        # Obtener publicaciones desde Reddit
-        posts_json = await fetch_reddit_posts(subreddit, limit)
-        
-        # Parsear las publicaciones
-        posts = eval(posts_json)  # Convertir JSON en lista
-
-        # Analizar sentimiento
-        sentiment = analyze_sentiment(posts)
-        
-        return {
-            "subreddit": subreddit,
-            "limit": limit,
-            "sentiment": sentiment,
-        }
-    except Exception as e:
-        return {"error": str(e)}
+# Endpoint para el análisis de sentimiento
+@app.get("/analyze", response_model=SentimentResponse)
+async def analyze_sentiment_endpoint(
+    query: str = Query(..., description="Palabra clave para buscar en Reddit"),
+    subreddit: str = Query("all", description="Subreddit donde buscar, por defecto 'all'"),
+    limit: int = Query(10, description="Cantidad máxima de posts a analizar"),
+):
+    reddit = get_reddit_client()
+    posts = search_posts(reddit, query, subreddit, limit)
+    sentiment_summary = analyze_posts(posts)
+    
+    return SentimentResponse(
+        query=query,
+        total_posts=len(posts),
+        sentiment_summary=sentiment_summary,
+    )
